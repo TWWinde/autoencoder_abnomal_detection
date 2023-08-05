@@ -10,7 +10,7 @@ def autoencoder(input_shape):
     latent_variables = encoder(inputs)
     outputs = decoder(latent_variables)
 
-    return tf.keras.Model(inputs=inputs, outputs=outputs, name='autoencoder')
+    return tf.keras.Model(inputs=inputs, outputs=outputs, name='autoencoder'), latent_variables
 
 
 @gin.configurable

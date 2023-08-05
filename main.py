@@ -80,6 +80,7 @@ def main(argv):
             tf.print("Error")
 
         if args.evaluation == 'evaluation':
+            evaluate(model, ds_test)
             for images in ds_test:
                 predictions = model(images, training=False).numpy()
                 images = images.numpy()

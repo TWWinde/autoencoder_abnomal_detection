@@ -21,22 +21,24 @@ def reconstruct_images(model, ds_test, num_images=5):
         axes[1, i].axis('off')
 
     plt.show()
+
+
 # This function is to test normal pictures and to calculate the loss threshold
 def evaluate(model, ds_test):
     loss_object = tf.keras.losses.MAE
     eval_loss = tf.keras.metrics.Mean(name='test_loss')
     losses = []
     for images in ds_test:
-        print(images)
-        print('###################################################################')
-        predictions = model(images, training=False)
-        plot_images(images, predictions, num_images=5)
-        plt.tight_layout()
-        plt.show()
-        print('###################################################################')
+        predictions = model(images, training=False).numpy()
+        images = images.numpy()
         t_loss = loss_object(images, predictions)
-        print(t_loss)
-        losses.append(t_loss)
+        print(predictions.shape)
+        for i in range(images.numpy().shape(0)):
+            prediction = predictions[i].numpy()
+            image = images[i].numpy()
+            loss = loss_object(image, prediction)
+            losses.append(loss)
+
         eval_loss(t_loss)
 
     sorted_losses = sorted(losses)
@@ -50,7 +52,6 @@ def evaluate(model, ds_test):
 
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 def plot_images(images, predictions, num_images=5):

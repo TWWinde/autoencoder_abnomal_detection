@@ -22,16 +22,16 @@ class ImageDataPipeline:
 
     def preprocess_image(self, image_path):
         image = tf.io.read_file(image_path)
-        image = tf.image.decode_image(image)
-        image = tf.image.resize(image, self.image_size)
+        image = tf.image.decode_image(image, channels=3)
+        image.set_shape([256, 256, 3])
+        image = tf.image.resize(image, [256, 256])
         image = image / 255.0
         return image
 
     def create_dataset(self, image_paths):
-        # 转换为 TensorFlow 中的 Dataset
+
         images_dataset = tf.data.Dataset.from_tensor_slices(image_paths)
 
-        # 对数据集进行预处理
         dataset = images_dataset.map(self.preprocess_image)
         dataset = dataset.batch(self.batch_size)
         dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
@@ -56,6 +56,7 @@ class ImageDataPipeline:
         test_image_paths = image_paths[train_samples + val_samples:]
 
         train_dataset = self.create_dataset(train_image_paths)
+        size = train_dataset.cardinality().numpy()
         val_dataset = self.create_dataset(val_image_paths)
         test_dataset = self.create_dataset(test_image_paths)
 

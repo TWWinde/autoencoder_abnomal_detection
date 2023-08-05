@@ -5,12 +5,12 @@ import logging
 import numpy as np
 from absl import app, flags
 import tensorflow as tf
-
+from evaluation.test import evaluate
 from input_pipeline.dataset import ImageDataPipeline
 from train import Trainer
 from utilss import utils_params, utils_misc
 import gin
-from models import autoencoder
+from models.autoencoder import autoencoder
 
 parser = argparse.ArgumentParser(description='Train model')
 parser.add_argument('--model', choices=['autoencoder', 'other_model'],
@@ -18,7 +18,8 @@ parser.add_argument('--model', choices=['autoencoder', 'other_model'],
 parser.add_argument('--mode', choices=['train', 'test'], default='train', help='train or test')
 parser.add_argument('--evaluation', choices=['evaluatation', 'other_evalution_mathods'],
                     default='evaluatation', help='evaluation methods')
-parser.add_argument('--checkpoint-file', type=str, default='./ckpts/',
+parser.add_argument('--checkpoint-file', type=str, default='/home/wenwutang/PycharmProjects/experiments/run_2023-08'
+                                                           '-05T18-43-44-952339/ckpts/',
                     help='Path to checkpoint.')
 
 args = parser.parse_args()
@@ -54,15 +55,14 @@ def main(argv):
     ds_train, ds_val, ds_test = image_pipeline.split_dataset()
 
     if args.model == 'autoencoder':
-        model = autoencoder
+        model = autoencoder()
     elif args.model == 'other_model':
         pass
     else:
         print('Error, model does not exist')
 
-    model.summary()
-
     if args.mode == 'train':
+        model.summary()
         trainer = Trainer(model, ds_train, ds_val, run_paths)
         for _ in trainer.train():
             continue
@@ -80,9 +80,10 @@ def main(argv):
 
         if args.evaluation == 'evaluation':
             ds_test = ds_test.batch(32)
-            evaluate_fl(model, ds_test)
+            evaluate(model, ds_test)
         elif args.evaluation == 'confusionmatrix':
-            confusionmatrix(model, ds_test)
+            pass
+            # confusionmatrix(model, ds_test)
 
 
 if __name__ == "__main__":

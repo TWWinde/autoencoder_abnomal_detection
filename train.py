@@ -1,15 +1,17 @@
 import datetime
 import os
+
+import gin
 import tensorflow as tf
 import logging
 
 
+@gin.configurable
 class Trainer(object):
 
-    def __init__(self, model, ds_train, ds_val, run_paths, total_steps, log_interval, ckpt_interval, acc,
-                 alpha, gamma):
+    def __init__(self, model, ds_train, ds_val, run_paths, total_steps, log_interval, ckpt_interval, num_epochs):
         # Summary Writer
-
+        self.step = 0
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         current_dir = os.path.dirname(__file__)
         tensorboard_log_dir = os.path.join(current_dir, 'logs')
@@ -20,21 +22,18 @@ class Trainer(object):
 
         self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
         self.val_summary_writer = tf.summary.create_file_writer(self.val_log_dir)
-        self.alpha = alpha
-        self.gamma = gamma
+
         # Loss objective
 
-        self.loss_object = tf.keras.losses.MAE(from_logits=False, alpha=alpha, gamma=gamma)
+        self.loss_object = tf.keras.losses.MAE
         lr_scheduler = tf.keras.optimizers.schedules.CosineDecay(initial_learning_rate=0.001,
                                                                  decay_steps=1000,
                                                                  alpha=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr_scheduler)
 
         # Metrics
-        self.train_loss = tf.keras.metrics.MAE(name='train_loss')
-        self.train_accuracy = tf.keras.metrics.MSE(name='train_accuracy')
-        self.val_loss = tf.keras.metrics.MAE(name='val_loss')
-        self.val_accuracy = tf.keras.metrics.MSE(name='val_accuracy')
+        self.train_loss = tf.keras.metrics.Mean(name='train_loss')
+        self.val_loss = tf.keras.metrics.Mean(name='val_loss')
 
         self.model = model
         self.ds_train = ds_train
@@ -43,7 +42,8 @@ class Trainer(object):
         self.total_steps = total_steps
         self.log_interval = log_interval
         self.ckpt_interval = ckpt_interval
-        self.acc = acc
+        self.acc = 1
+        self.num_epochs = num_epochs
         # ....
         self.checkpoint = tf.train.Checkpoint(step=tf.Variable(0), model=self.model, optimizer=self.optimizer)
         self.manager = tf.train.CheckpointManager(self.checkpoint, directory=run_paths["path_ckpts_train"],
@@ -54,7 +54,6 @@ class Trainer(object):
     @tf.function
     def train_step(self, images):
         with tf.GradientTape() as tape:
-
             images = tf.cast(images, dtype=tf.float32)
             predictions = self.model(images, training=True)
             loss = self.loss_object(images, predictions)
@@ -63,7 +62,6 @@ class Trainer(object):
         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
         self.train_loss(loss)
-        self.train_accuracy(images, predictions)
 
     @tf.function
     def val_step(self, images):
@@ -73,79 +71,53 @@ class Trainer(object):
         t_loss = self.loss_object(images, predictions)
 
         self.val_loss(t_loss)
-        self.val_accuracy(images, predictions)
 
     def write_scalar_summary(self, step):
         """ Write scalar summary to tensorboard """
 
         with self.train_summary_writer.as_default():
             tf.summary.scalar('loss', self.train_loss.result(), step=step)
-            tf.summary.scalar('accuracy', self.train_accuracy.result(), step=step)
 
         with self.val_summary_writer.as_default():
             tf.summary.scalar('loss', self.val_loss.result(), step=step)
-            tf.summary.scalar('accuracy', self.val_accuracy.result(), step=step)
 
     def train(self):
         logging.info(self.model.summary())
         logging.info('\n================ Starting Training ================')
-        self.acc = 0
+        self.acc = 0.1
+        self.step = 1
+        for epoch in range(1, self.num_epochs + 1):
+            logging.info(f'\nEpoch {epoch}/{self.num_epochs}:')
+            for idx, images in enumerate(self.ds_train):
+                self.step += 1
+                self.train_step(images)
 
-        for idx, images in enumerate(self.ds_train):
+                if self.step % self.log_interval == 0:
+                    # Reset test metrics
+                    self.val_loss.reset_states()
 
-            step = idx + 1
-            self.train_step(images)
-            # logging.info('\nThe {} step is now being implemented.'.format(step))
+                    for val_images in self.ds_val:
+                        self.val_step(val_images)
 
-            if step % self.log_interval == 0:
+                    template = 'Step {}, train MAE Loss: {}, Validation MSE Accuracy: {}'
+                    logging.info(template.format(self.step, self.train_loss.result(), self.val_loss.result()))
 
-                # Reset test metrics
-                self.val_loss.reset_states()
-                self.val_accuracy.reset_states()
+                    # Write summary to tensorboard
+                    self.write_scalar_summary(self.step)
 
-                for val_images in self.ds_val:
-                    self.val_step(val_images)
+                    # Reset train metrics
+                    self.train_loss.reset_states()
 
-                template = ('Step {}, train MAE Loss: {}, train MSE Accuracy: {}, Validation MAE Loss: {}, Validation '
-                            'MSE Accuracy: {}')
-                logging.info(template.format(step,
-                                             self.train_loss.result(),
-                                             self.train_accuracy.result() * 100,
-                                             self.val_loss.result(),
-                                             self.val_accuracy.result() * 100))
+                    yield self.val_loss.result().numpy()
 
-                # Write summary to tensorboard
-                self.write_scalar_summary(step)
+                if self.step % self.ckpt_interval == 0:
+                    if self.acc > self.val_loss.result():
+                        self.acc = self.val_loss.result()
+                        logging.info(f'Saving checkpoint to {self.run_paths["path_ckpts_train"]}.')
+                        path = self.manager.save()
+                        print("model saved to %s" % path)
 
-                # Reset train metrics
-                self.train_loss.reset_states()
-                self.train_accuracy.reset_states()
-
-                yield self.val_accuracy.result().numpy()
-
-            if step > 4000 and step % self.ckpt_interval == 0:
-                if self.acc < self.val_accuracy.result():
-                    self.acc = self.val_accuracy.result()
-                    logging.info(f'Saving checkpoint to {self.run_paths["path_ckpts_train"]}.')
-                    path = self.manager.save()
-                    print("model saved to %s" % path)
-                    # Save checkpoint
-                    # ...
-
-            if step % self.total_steps == 0:
-                logging.info(f'Finished training after {step} steps.')
-                path = self.manager.save()
-                print("final model saved to %s" % path)
-                # Save final checkpoint
-                # ...
-                return self.val_accuracy.result().numpy()
-
-        template = 'Step {}, Loss: {}, Accuracy: {}, Validation Loss: {}, Validation Accuracy: {}'
-        logging.info(template.format(step,
-                                     self.train_loss.result(),
-                                     self.train_accuracy.result() * 100,
-                                     self.val_loss.result(),
-                                     self.val_accuracy.result() * 100))
+            logging.info(f'Epoch {epoch}/{self.num_epochs} finished.')
 
         logging.info('\n================ Finished Training ================')
 

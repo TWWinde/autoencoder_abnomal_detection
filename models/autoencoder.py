@@ -4,7 +4,9 @@ import tensorflow as tf
 
 
 @gin.configurable
-def autoencoder(inputs):
+def autoencoder(input_shape):
+    
+    inputs = tf.keras.Input(input_shape)
     latent_variables = encoder(inputs)
     outputs = decoder(latent_variables)
 
@@ -27,20 +29,20 @@ def encoder(inputs, kernel_size, latent_dim):
 
 
 @gin.configurable
-def decoder(inputs):
+def decoder(inputs, kernel_size):
     out = tf.keras.layers.Dense(192, activation='relu')(inputs)
     out = tf.keras.layers.Reshape((8, 8, 3))(out)
 
-    out = tf.keras.layers.Conv2D(3, (3, 3), activation='relu', padding='same')(out)
+    out = tf.keras.layers.Conv2D(3, kernel_size , activation='relu', padding='same')(out)
     out = tf.keras.layers.UpSampling2D((2, 2))(out)
 
-    out = tf.keras.layers.Conv2D(8, (3, 3), activation='relu', padding='same')(out)
+    out = tf.keras.layers.Conv2D(8, kernel_size, activation='relu', padding='same')(out)
     out = tf.keras.layers.UpSampling2D((4, 4))(out)
 
-    out = tf.keras.layers.Conv2D(16, (3, 3), activation='relu', padding='same')(out)
+    out = tf.keras.layers.Conv2D(16, kernel_size, activation='relu', padding='same')(out)
     out = tf.keras.layers.UpSampling2D((4, 4))(out)
 
-    out = tf.keras.layers.Conv2D(3, (3, 3), activation='sigmoid', padding='same')(out)
+    out = tf.keras.layers.Conv2D(3, kernel_size, activation='sigmoid', padding='same')(out)
 
     return out
 

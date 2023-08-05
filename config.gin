@@ -1,17 +1,19 @@
 
 # Dataset
-ImageDataPipeline.root_path = '/'
-ImageDataPipeline.image_size = (256, 256)
+ImageDataPipeline.root_path = '/home/wenwutang/PycharmProjects/autoencoder_abnomal_detection/gazebo_images/normal_train/images'
+ImageDataPipeline.image_size = [256, 256]
 ImageDataPipeline.batch_size = 32
 
 # Model
 encoder.kernel_size = (3,3)
 encoder.latent_dim = 50
 decoder.kernel_size = (3,3)
+autoencoder.input_shape = (256, 256, 3)
 
 # Trainer
-train.total_steps = 10000
-train.log_interval = 20
-train.ckpt_interval = 20
+Trainer.total_steps = 10000
+Trainer.log_interval = 5
+Trainer.ckpt_interval = 5
+Trainer.num_epochs = 500
 
 

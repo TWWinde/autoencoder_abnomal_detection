@@ -1,7 +1,5 @@
 import datetime
 import os
-
-import numpy as np
 import tensorflow as tf
 import logging
 
@@ -105,8 +103,8 @@ class Trainer(object):
                 self.val_loss.reset_states()
                 self.val_accuracy.reset_states()
 
-                for val_images, val_labels in self.ds_val:
-                    self.val_step(val_images, val_labels)
+                for val_images in self.ds_val:
+                    self.val_step(val_images)
 
                 template = ('Step {}, train MAE Loss: {}, train MSE Accuracy: {}, Validation MAE Loss: {}, Validation '
                             'MSE Accuracy: {}')
@@ -125,7 +123,7 @@ class Trainer(object):
 
                 yield self.val_accuracy.result().numpy()
 
-            if step % self.ckpt_interval == 0:
+            if step > 4000 and step % self.ckpt_interval == 0:
                 if self.acc < self.val_accuracy.result():
                     self.acc = self.val_accuracy.result()
                     logging.info(f'Saving checkpoint to {self.run_paths["path_ckpts_train"]}.')

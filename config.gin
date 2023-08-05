@@ -1,9 +1,17 @@
-encoder.kernel_size = (3,3)
 
-decoder.kernel_size = (3,3)
-
+# Dataset
 ImageDataPipeline.root_path = '/'
 ImageDataPipeline.image_size = (256, 256)
 ImageDataPipeline.batch_size = 32
+
+# Model
+encoder.kernel_size = (3,3)
+encoder.latent_dim = 50
+decoder.kernel_size = (3,3)
+
+# Trainer
+train.total_steps = 10000
+train.log_interval = 20
+train.ckpt_interval = 20
 
 

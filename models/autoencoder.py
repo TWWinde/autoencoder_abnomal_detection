@@ -12,7 +12,7 @@ def autoencoder(inputs):
 
 
 @gin.configurable
-def encoder(inputs, kernel_size=(3, 3), latent_dim=50):
+def encoder(inputs, kernel_size, latent_dim):
     out = tf.keras.layers.Conv2D(16, kernel_size, padding='same', activation=tf.nn.relu, input_shape=(96, 96, 3))(
         inputs)
     out = tf.keras.layers.MaxPooling2D(pool_size=(4, 4), padding='same')(out)

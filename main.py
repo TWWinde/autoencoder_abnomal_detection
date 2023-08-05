@@ -55,9 +55,7 @@ def main(argv):
 
     # get datasets
     ds_train, ds_val, ds_test = image_pipeline.split_dataset()
-    test_batch = ds_test.take(32)
-    for image in test_batch:
-        tf.keras.preprocessing.image.array_to_img(image).show()
+
     if args.model == 'autoencoder':
         model = autoencoder()
     elif args.model == 'other_model':
@@ -82,18 +80,21 @@ def main(argv):
             tf.print("Error")
 
         if args.evaluation == 'evaluation':
-            batch_size = 5
-            test_batch = ds_test.take(batch_size)
-            for idx, image in test_batch:
-                image_np = image.numpy()
-                # Convert the NumPy array to a PIL image
-                pil_image = Image.fromarray((image_np * 255).astype('uint8'))
-                image_filename = os.path.join(f'image_{idx}.png')
-                pil_image.save(image_filename)
+            for images in ds_test:
+                predictions = model(images, training=False).numpy()
+                images = images.numpy()
+                print(predictions.shape)
+                for i in range(32):
+                    prediction = predictions[i]
+                    plt.imshow(prediction)
+                    plt.show()
+                predictions = predictions.numpy()
+                # pil_image = Image.fromarray((image_np * 255).astype('uint8'))
 
-                print(f'Saved image {idx + 1}/{batch_size}: {image_filename}')
+
+                # print(f'Saved image {idx + 1}/{batch_size}: {image_filename}')
                 # Show the image using PIL
-                pil_image.show()
+                # pil_image.show()
             # image = ds_test[0][0]
             # plt.imshow(image)
             # plt.show()

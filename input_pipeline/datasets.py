@@ -24,50 +24,13 @@ def get_dataset(filenames):
 
 @gin.configurable
 def load(name, save_path):  # (name, data_dir)
-    if name == "idrid":
-        logging.info(f"Preparing dataset {name}...")
-        ds_test = get_dataset(save_path + 'test.tfrecords')
-        ds_train = get_dataset(save_path + 'train.tfrecords')
-        ds_val = get_dataset(save_path + 'validation.tfrecords')
 
-        ds_info = DatasetInfo
+    logging.info(f"Preparing dataset {name}...")
+    ds_test = get_dataset(save_path + 'test.tfrecords')
+    ds_train = get_dataset(save_path + 'train.tfrecords')
+    ds_val = get_dataset(save_path + 'validation.tfrecords')
 
-        return prepare(ds_train, ds_val, ds_test, ds_info)
-
-    elif name == "eyepacs":
-        logging.info(f"Preparing dataset {name}...")
-        (ds_train, ds_val, ds_test), ds_info = tfds.load(
-            'diabetic_retinopathy_detection/btgraham-300',
-            split=['train', 'validation', 'test'],
-            shuffle_files=True,
-            with_info=True,
-            data_dir=data_dir
-        )
-
-        def _preprocess(img_label_dict):
-            return img_label_dict['image'], img_label_dict['label']
-
-        ds_train = ds_train.map(_preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        ds_val = ds_val.map(_preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        ds_test = ds_test.map(_preprocess, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-        return prepare(ds_train, ds_val, ds_test, ds_info)
-
-    elif name == "mnist":
-        logging.info(f"Preparing dataset {name}...")
-        (ds_train, ds_val, ds_test), ds_info = tf.keras.datasets.mnist.load_data(
-            'mnist',
-            split=['train[:90%]', 'train[90%:]', 'test'],
-            shuffle_files=True,
-            as_supervised=True,
-            with_info=True,
-            data_dir=data_dir
-        )
-
-        return prepare(ds_train, ds_val, ds_test, ds_info)
-
-    else:
-        raise ValueError
+    return prepare(ds_train, ds_val, ds_test)
 
 
 @gin.configurable

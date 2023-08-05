@@ -56,8 +56,9 @@ class ImageDataPipeline:
         test_image_paths = image_paths[train_samples + val_samples:]
 
         train_dataset = self.create_dataset(train_image_paths)
-        size = train_dataset.cardinality().numpy()
         val_dataset = self.create_dataset(val_image_paths)
         test_dataset = self.create_dataset(test_image_paths)
 
         return train_dataset, val_dataset, test_dataset
+
+

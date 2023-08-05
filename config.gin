@@ -2,6 +2,8 @@ encoder.kernel_size = (3,3)
 
 decoder.kernel_size = (3,3)
 
-ImageDataPipeline.image_path
+ImageDataPipeline.root_path = '/'
+ImageDataPipeline.image_size = (256, 256)
+ImageDataPipeline.batch_size = 32
 
 

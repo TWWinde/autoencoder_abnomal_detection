@@ -11,12 +11,13 @@ from train import Trainer
 from utilss import utils_params, utils_misc
 import gin
 from models import autoencoder
+
 parser = argparse.ArgumentParser(description='Train model')
 parser.add_argument('--model', choices=['autoencoder', 'other_model'],
                     default='autoencoder', help='choose model')
 parser.add_argument('--mode', choices=['train', 'test'], default='train', help='train or test')
-parser.add_argument('--evaluation', choices=['evaluate_fl', 'confusionmatrix', 'Dimensionality_Reduction', 'ROC'],
-                    default='evaluate_fl', help='evaluation methods')
+parser.add_argument('--evaluation', choices=['evaluatation', 'other_evalution_mathods'],
+                    default='evaluatation', help='evaluation methods')
 parser.add_argument('--checkpoint-file', type=str, default='./ckpts/',
                     help='Path to checkpoint.')
 
@@ -47,24 +48,22 @@ def main(argv):
     utils_params.save_config(run_paths['path_gin'], gin.config_str())
 
     # setup pipeline
-    image_pipeline = ImageDataPipeline(images_list, batch_size=32)
+    image_pipeline = ImageDataPipeline()
 
-    # 划分数据集并创建训练集、验证集和测试集的数据管道
+    # get datasets
     ds_train, ds_val, ds_test = image_pipeline.split_dataset()
-
 
     if args.model == 'autoencoder':
         model = autoencoder
     elif args.model == 'other_model':
-
-       pass
+        pass
     else:
         print('Error, model does not exist')
 
     model.summary()
 
     if args.mode == 'train':
-        trainer = Trainer(model, ds_train, ds_val, ds_info, run_paths)
+        trainer = Trainer(model, ds_train, ds_val, run_paths)
         for _ in trainer.train():
             continue
     else:
@@ -79,15 +78,11 @@ def main(argv):
         else:
             tf.print("Error")
 
-        if args.evaluation == 'evaluate_fl':
+        if args.evaluation == 'evaluation':
             ds_test = ds_test.batch(32)
             evaluate_fl(model, ds_test)
         elif args.evaluation == 'confusionmatrix':
             confusionmatrix(model, ds_test)
-        elif args.evaluation == 'Dimensionality_Reduction':
-            Dimensionality_Reduction(model, ds_test)
-        elif args.evaluation == 'ROC':
-            ROC(model, ds_test)
 
 
 if __name__ == "__main__":

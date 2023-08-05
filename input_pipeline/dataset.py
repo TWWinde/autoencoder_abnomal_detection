@@ -1,5 +1,4 @@
 import os
-
 import gin
 import tensorflow as tf
 
@@ -14,7 +13,7 @@ def get_image_list(root_path):
 
 @gin.configurable
 class ImageDataPipeline:
-    def __init__(self, root_path, batch_size, image_size=(256, 256)):
+    def __init__(self, root_path, batch_size, image_size):
 
         self.batch_size = batch_size
         self.image_size = image_size

@@ -3,9 +3,12 @@ import argparse
 import random
 import logging
 import numpy as np
+from PIL import Image
 from absl import app, flags
 import tensorflow as tf
-from evaluation.test import evaluate
+from matplotlib import pyplot as plt
+
+from evaluation.test import evaluate, reconstruct_images
 from input_pipeline.dataset import ImageDataPipeline
 from train import Trainer
 from utilss import utils_params, utils_misc
@@ -15,11 +18,10 @@ from models.autoencoder import autoencoder
 parser = argparse.ArgumentParser(description='Train model')
 parser.add_argument('--model', choices=['autoencoder', 'other_model'],
                     default='autoencoder', help='choose model')
-parser.add_argument('--mode', choices=['train', 'test'], default='train', help='train or test')
-parser.add_argument('--evaluation', choices=['evaluatation', 'other_evalution_mathods'],
-                    default='evaluatation', help='evaluation methods')
-parser.add_argument('--checkpoint-file', type=str, default='/home/wenwutang/PycharmProjects/experiments/run_2023-08'
-                                                           '-05T18-43-44-952339/ckpts/',
+parser.add_argument('--mode', choices=['train', 'test'], default='test', help='train or test')
+parser.add_argument('--evaluation', choices=['evaluation', 'other_evalution_mathods'],
+                    default='evaluation', help='evaluation methods')
+parser.add_argument('--checkpoint-file', type=str, default='/home/wenwutang/PycharmProjects/experiments/run_2023-08-05T18-43-44-952339/ckpts',
                     help='Path to checkpoint.')
 
 args = parser.parse_args()
@@ -53,7 +55,9 @@ def main(argv):
 
     # get datasets
     ds_train, ds_val, ds_test = image_pipeline.split_dataset()
-
+    test_batch = ds_test.take(32)
+    for image in test_batch:
+        tf.keras.preprocessing.image.array_to_img(image).show()
     if args.model == 'autoencoder':
         model = autoencoder()
     elif args.model == 'other_model':
@@ -66,11 +70,10 @@ def main(argv):
         trainer = Trainer(model, ds_train, ds_val, run_paths)
         for _ in trainer.train():
             continue
-    else:
+    elif args.mode == 'test':
+        # model = tf.keras.models.load_model(args.checkpoint_file)
         checkpoint = tf.train.Checkpoint(step=tf.Variable(0), model=model)
-        manager = tf.train.CheckpointManager(checkpoint,
-                                             directory=args.checkpoint_file,
-                                             max_to_keep=3)
+        manager = tf.train.CheckpointManager(checkpoint, directory=args.checkpoint_file,max_to_keep=3)
 
         checkpoint.restore(manager.latest_checkpoint)
         if manager.latest_checkpoint:
@@ -79,8 +82,25 @@ def main(argv):
             tf.print("Error")
 
         if args.evaluation == 'evaluation':
-            ds_test = ds_test.batch(32)
-            evaluate(model, ds_test)
+            batch_size = 5
+            test_batch = ds_test.take(batch_size)
+            for idx, image in test_batch:
+                image_np = image.numpy()
+                # Convert the NumPy array to a PIL image
+                pil_image = Image.fromarray((image_np * 255).astype('uint8'))
+                image_filename = os.path.join(f'image_{idx}.png')
+                pil_image.save(image_filename)
+
+                print(f'Saved image {idx + 1}/{batch_size}: {image_filename}')
+                # Show the image using PIL
+                pil_image.show()
+            # image = ds_test[0][0]
+            # plt.imshow(image)
+            # plt.show()
+
+            #reconstruct_images(model, ds_test)
+            # evaluate(model, ds_test)
+            #print('#########################################', loss_threshold)
         elif args.evaluation == 'confusionmatrix':
             pass
             # confusionmatrix(model, ds_test)

@@ -113,9 +113,10 @@ class Trainer(object):
                 if self.step % self.ckpt_interval == 0:
                     if self.acc > self.val_loss.result():
                         self.acc = self.val_loss.result()
+                        #tf.keras.models.save_model(self.model, self.run_paths["path_ckpts_train"])
                         logging.info(f'Saving checkpoint to {self.run_paths["path_ckpts_train"]}.')
                         path = self.manager.save()
-                        print("model saved to %s" % path)
+                        print("model saved to %s" % self.run_paths["path_ckpts_train"])
 
             logging.info(f'Epoch {epoch}/{self.num_epochs} finished.')
 
